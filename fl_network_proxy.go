@@ -10,7 +10,10 @@ import (
 )
 
 
-func RecieveFromClient(clientConnection, serverConnection *net.UDPConn, returnChannel chan int) {
+var returnChannel = make(chan int)
+
+
+func RecieveFromClient(clientConnection, serverConnection *net.UDPConn) {
 	buffer := make([]byte, 1024)
 	packetCount := 0
 	for {
@@ -43,7 +46,7 @@ func RecieveFromClient(clientConnection, serverConnection *net.UDPConn, returnCh
 	returnChannel <- 1337
 }
 
-func RecieveFromServer(clientConnection, serverConnection *net.UDPConn, returnChannel chan int) {
+func RecieveFromServer(clientConnection, serverConnection *net.UDPConn) {
 	buffer := make([]byte, 1024)
 	packetCount := 0
 	for {
@@ -123,9 +126,8 @@ func main() {
 	log.Printf("[*] UDP dialed in to client (%s)\n", clientIP)
 
 
-	returnChannel := make(chan int)
-	go RecieveFromClient(clientConnection, serverConnection, returnChannel)
-	go RecieveFromServer(clientConnection, serverConnection, returnChannel)
+	go RecieveFromClient(clientConnection, serverConnection)
+	go RecieveFromServer(clientConnection, serverConnection)
 
 	returnValue := <- returnChannel
 	log.Printf("[!] Returned %d\n", returnValue)
