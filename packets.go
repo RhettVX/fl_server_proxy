@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/binary"
 	"log"
+	"fmt"
 )
 
 
@@ -13,23 +14,18 @@ type CorePacket struct {
 }
 
 
-var core_packet_type_map = map[uint16]CorePacket {
+var corePacketTypeMap = map[uint16]CorePacket {
 	0x0001: CorePacket {
 		name: "SessionRequest",
 		Parse: func(reader *bytes.Reader) map[string]interface{} {
-			var clientCRCLength uint32
-			var clientSessionId uint32
-			var clientUDPLength uint32
-			var protocol		string
-
-			binary.Read(reader, binary.BigEndian, &clientCRCLength)
-			binary.Read(reader, binary.BigEndian, &clientSessionId)
-			binary.Read(reader, binary.BigEndian, &clientUDPLength)
-			protocol = ReadNullTerminatedString(reader)
+			clientCRCLength := ReadUint32be(reader)
+			clientSessionID := ReadUint32be(reader)
+			clientUDPLength := ReadUint32be(reader)
+			protocol := ReadNullTerminatedString(reader)
 
 			result := map[string]interface{} {
 				"clientCRCLength": clientCRCLength,
-				"clientSessionId": clientSessionId,
+				"clientSessionID": clientSessionID,
 				"clientUDPLength": clientUDPLength,
 				"protocol": protocol,
 			}
@@ -39,9 +35,20 @@ var core_packet_type_map = map[uint16]CorePacket {
 	0x0002: CorePacket {
 		name: "SessionReply",
 		Parse: func(reader *bytes.Reader) map[string]interface{} {
-			log.Println("[!] Not implemented.")
-			var empty map[string]interface{}
-			return empty
+			serverSessionID := ReadUint32be(reader)
+			serverCRCSeed := ReadUint32be(reader)
+			serverCRCLength := ReadUint8(reader)
+			serverCompression := ReadUint16be(reader)
+			serverUDPLength := ReadUint32be(reader)
+
+			result := map[string]interface{} {
+				"serverSessionID": serverSessionID,
+				"serverCRCSeed": serverCRCSeed,
+				"serverCRCLength": serverCRCLength,
+				"serverCompression": serverCompression,
+				"serverUDPLength": serverUDPLength,
+			}
+			return result
 		},
 	},
 	0x0003: CorePacket {
@@ -134,6 +141,21 @@ var core_packet_type_map = map[uint16]CorePacket {
 	},
 }
 
+func ReadUint8(reader *bytes.Reader) uint8 {
+	result, _ := reader.ReadByte()
+	return result
+}
+
+func ReadUint16be(reader *bytes.Reader) (result uint16) {
+	binary.Read(reader, binary.BigEndian, &result)
+	return result
+}
+
+func ReadUint32be(reader *bytes.Reader) (result uint32) {
+	binary.Read(reader, binary.BigEndian, &result)
+	return result
+}
+
 func ReadNullTerminatedString(reader *bytes.Reader) string {
 	buffer := make([]byte, 255)
 	var string_length int
@@ -152,17 +174,19 @@ func ReadNullTerminatedString(reader *bytes.Reader) string {
 	return string(buffer[:string_length])
 }
 
-func IdentifyPacket(reader *bytes.Reader) string {
-	var opcode uint16
-	binary.Read(reader, binary.BigEndian, &opcode)
-	for k, v := range core_packet_type_map {
+func IdentifyPacketName(reader *bytes.Reader) string {
+	opcode := ReadUint16be(reader)
+	for k, v := range corePacketTypeMap {
 		if opcode == k {
-			test := v.Parse(reader)
-			if opcode == 1 {
-				log.Println(test["clientCRCLength"])
-				log.Println(test["clientSessionId"])
-				log.Println(test["clientUDPLength"])
-				log.Println(test["protocol"])
+			// TODO(rhett): 
+			result := v.Parse(reader)
+			if result != nil {
+				fmt.Println()
+				log.Printf("=== %s ========================\n", v.name)
+				for k, v := range result {
+					log.Printf("- %-24s: %v\n", k, v)
+				}
+				fmt.Println()
 			}
 			return v.name
 		}
