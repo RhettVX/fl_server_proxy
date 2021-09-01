@@ -3,10 +3,6 @@ package main
 import (
 	"log"
 	"net"
-	"encoding/hex"
-	"os"
-	"strconv"
-	"bytes"
 )
 
 
@@ -18,29 +14,11 @@ func RecieveFromClient(clientConnection, serverConnection *net.UDPConn) {
 	packetCount := 0
 	for {
 		dataLengthFromClient, clientAddr, err := clientConnection.ReadFromUDP(buffer)
-		reader := bytes.NewReader(buffer)
-		if err != nil {
-			log.Fatalln("[X] Error recieving from client:", err.Error())
-		}
 
-		//================================================================
-		f, err := os.Create("c" + strconv.Itoa(packetCount) + "_" + IdentifyPacketName(reader) + ".bin")
-		if err != nil {
-			log.Fatalln("[X] Unable to create file:", err.Error())
-		}
-		_, err = f.Write(buffer[0:dataLengthFromClient])
-		if err != nil {
-			log.Fatalln("[X] Unable to write to file:", err.Error())
-		}
-		err = f.Close()
-		if err != nil {
-			log.Fatalln("[X] Unable to close file:", err.Error())
-		}
+		HandlePacket(buffer[:], dataLengthFromClient, clientAddr, packetCount, true)
 		packetCount += 1
-		log.Printf("[*] (%s) Recieved %d bytes: \n%s\n", clientAddr, dataLengthFromClient, hex.Dump(buffer[0:dataLengthFromClient]))
-		//================================================================
 
-		dataLengthToServer, err := serverConnection.Write(buffer[0:dataLengthFromClient])
+		dataLengthToServer, err := serverConnection.Write(buffer[:dataLengthFromClient])
 		if err != nil {
 			log.Fatalln("[X] Unable to forward message to server:", err.Error())
 		}
@@ -54,29 +32,11 @@ func RecieveFromServer(clientConnection, serverConnection *net.UDPConn) {
 	packetCount := 0
 	for {
 		dataLengthFromServer, serverAddr, err := serverConnection.ReadFromUDP(buffer)
-		reader := bytes.NewReader(buffer)
-		if err != nil {
-			log.Fatalln("[X] Error recieving from server:", err.Error())
-		}
 
-		//================================================================
-		f, err := os.Create("s" + strconv.Itoa(packetCount) + "_" + IdentifyPacketName(reader) + ".bin")
-		if err != nil {
-			log.Fatalln("[X] Unable to create file:", err.Error())
-		}
-		_, err = f.Write(buffer[0:dataLengthFromServer])
-		if err != nil {
-			log.Fatalln("[X] Unable to write to file:", err.Error())
-		}
-		err = f.Close()
-		if err != nil {
-			log.Fatalln("[X] Unable to close file:", err.Error())
-		}
+		HandlePacket(buffer[:], dataLengthFromServer, serverAddr, packetCount, false)
 		packetCount += 1
-		log.Printf("[*] (%s) Recieved %d bytes: \n%s\n", serverAddr, dataLengthFromServer, hex.Dump(buffer[0:dataLengthFromServer]))
-		//================================================================
 
-		dataLengthToClient, err := clientConnection.Write(buffer[0:dataLengthFromServer])
+		dataLengthToClient, err := clientConnection.Write(buffer[:dataLengthFromServer])
 		if err != nil {
 			log.Fatalln("[X] Unable to forward message to client:", err.Error())
 		}

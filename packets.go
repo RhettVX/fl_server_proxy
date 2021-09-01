@@ -2,22 +2,25 @@ package main
 
 import (
 	"bytes"
-	"encoding/binary"
 	"log"
 	"fmt"
+	"os"
+	"net"
+	"encoding/hex"
+	"strconv"
 )
 
 
 type CorePacket struct {
 	name string
-	Parse func(*bytes.Reader) map[string]interface{}
+	Parse func(*bytes.Reader, int, int, bool, interface{}) map[string]interface{}
 }
 
 
 var corePacketTypeMap = map[uint16]CorePacket {
 	0x0001: CorePacket {
 		name: "SessionRequest",
-		Parse: func(reader *bytes.Reader) map[string]interface{} {
+		Parse: func(reader *bytes.Reader, crcSeed, compression int, isSubPacket bool, appData interface{}) map[string]interface{} {
 			clientCRCLength := ReadUint32be(reader)
 			clientSessionID := ReadUint32be(reader)
 			clientUDPLength := ReadUint32be(reader)
@@ -34,7 +37,7 @@ var corePacketTypeMap = map[uint16]CorePacket {
 	},
 	0x0002: CorePacket {
 		name: "SessionReply",
-		Parse: func(reader *bytes.Reader) map[string]interface{} {
+		Parse: func(reader *bytes.Reader, crcSeed, compression int, isSubPacket bool, appData interface{}) map[string]interface{} {
 			serverSessionID := ReadUint32be(reader)
 			serverCRCSeed := ReadUint32be(reader)
 			serverCRCLength := ReadUint8(reader)
@@ -53,7 +56,7 @@ var corePacketTypeMap = map[uint16]CorePacket {
 	},
 	0x0003: CorePacket {
 		name: "MultiPacket",
-		Parse: func(reader *bytes.Reader) map[string]interface{} {
+		Parse: func(reader *bytes.Reader, crcSeed, compression int, isSubPacket bool, appData interface{}) map[string]interface{} {
 			log.Println("[!] Not implemented.")
 			var empty map[string]interface{}
 			return empty
@@ -61,7 +64,7 @@ var corePacketTypeMap = map[uint16]CorePacket {
 	},
 	0x0005: CorePacket {
 		name: "Disconnect",
-		Parse: func(reader *bytes.Reader) map[string]interface{} {
+		Parse: func(reader *bytes.Reader, crcSeed, compression int, isSubPacket bool, appData interface{}) map[string]interface{} {
 			log.Println("[!] Not implemented.")
 			var empty map[string]interface{}
 			return empty
@@ -69,7 +72,7 @@ var corePacketTypeMap = map[uint16]CorePacket {
 	},
 	0x0006: CorePacket {
 		name: "Ping",
-		Parse: func(reader *bytes.Reader) map[string]interface{} {
+		Parse: func(reader *bytes.Reader, crcSeed, compression int, isSubPacket bool, appData interface{}) map[string]interface{} {
 			log.Println("[!] Not implemented.")
 			var empty map[string]interface{}
 			return empty
@@ -77,7 +80,7 @@ var corePacketTypeMap = map[uint16]CorePacket {
 	},
 	0x0007: CorePacket {
 		name: "NetStatusRequest",
-		Parse: func(reader *bytes.Reader) map[string]interface{} {
+		Parse: func(reader *bytes.Reader, crcSeed, compression int, isSubPacket bool, appData interface{}) map[string]interface{} {
 			log.Println("[!] Not implemented.")
 			var empty map[string]interface{}
 			return empty
@@ -85,7 +88,7 @@ var corePacketTypeMap = map[uint16]CorePacket {
 	},
 	0x0008: CorePacket {
 		name: "NetStatusReply",
-		Parse: func(reader *bytes.Reader) map[string]interface{} {
+		Parse: func(reader *bytes.Reader, crcSeed, compression int, isSubPacket bool, appData interface{}) map[string]interface{} {
 			log.Println("[!] Not implemented.")
 			var empty map[string]interface{}
 			return empty
@@ -93,7 +96,7 @@ var corePacketTypeMap = map[uint16]CorePacket {
 	},
 	0x0009: CorePacket {
 		name: "Data",
-		Parse: func(reader *bytes.Reader) map[string]interface{} {
+		Parse: func(reader *bytes.Reader, crcSeed, compression int, isSubPacket bool, appData interface{}) map[string]interface{} {
 			log.Println("[!] Not implemented.")
 			var empty map[string]interface{}
 			return empty
@@ -101,7 +104,7 @@ var corePacketTypeMap = map[uint16]CorePacket {
 	},
 	0x000d: CorePacket {
 		name: "DataFragment",
-		Parse: func(reader *bytes.Reader) map[string]interface{} {
+		Parse: func(reader *bytes.Reader, crcSeed, compression int, isSubPacket bool, appData interface{}) map[string]interface{} {
 			log.Println("[!] Not implemented.")
 			var empty map[string]interface{}
 			return empty
@@ -109,7 +112,7 @@ var corePacketTypeMap = map[uint16]CorePacket {
 	},
 	0x0011: CorePacket {
 		name: "OutOfOrder",
-		Parse: func(reader *bytes.Reader) map[string]interface{} {
+		Parse: func(reader *bytes.Reader, crcSeed, compression int, isSubPacket bool, appData interface{}) map[string]interface{} {
 			log.Println("[!] Not implemented.")
 			var empty map[string]interface{}
 			return empty
@@ -117,7 +120,7 @@ var corePacketTypeMap = map[uint16]CorePacket {
 	},
 	0x0015: CorePacket {
 		name: "Ack",
-		Parse: func(reader *bytes.Reader) map[string]interface{} {
+		Parse: func(reader *bytes.Reader, crcSeed, compression int, isSubPacket bool, appData interface{}) map[string]interface{} {
 			log.Println("[!] Not implemented.")
 			var empty map[string]interface{}
 			return empty
@@ -125,7 +128,7 @@ var corePacketTypeMap = map[uint16]CorePacket {
 	},
 	0x001d: CorePacket {
 		name: "FatalError",
-		Parse: func(reader *bytes.Reader) map[string]interface{} {
+		Parse: func(reader *bytes.Reader, crcSeed, compression int, isSubPacket bool, appData interface{}) map[string]interface{} {
 			log.Println("[!] Not implemented.")
 			var empty map[string]interface{}
 			return empty
@@ -133,7 +136,7 @@ var corePacketTypeMap = map[uint16]CorePacket {
 	},
 	0x001e: CorePacket {
 		name: "FatalErrorReply",
-		Parse: func(reader *bytes.Reader) map[string]interface{} {
+		Parse: func(reader *bytes.Reader, crcSeed, compression int, isSubPacket bool, appData interface{}) map[string]interface{} {
 			log.Println("[!] Not implemented.")
 			var empty map[string]interface{}
 			return empty
@@ -141,53 +144,57 @@ var corePacketTypeMap = map[uint16]CorePacket {
 	},
 }
 
-func ReadUint8(reader *bytes.Reader) uint8 {
-	result, _ := reader.ReadByte()
-	return result
-}
-
-func ReadUint16be(reader *bytes.Reader) (result uint16) {
-	binary.Read(reader, binary.BigEndian, &result)
-	return result
-}
-
-func ReadUint32be(reader *bytes.Reader) (result uint32) {
-	binary.Read(reader, binary.BigEndian, &result)
-	return result
-}
-
-func ReadNullTerminatedString(reader *bytes.Reader) string {
-	buffer := make([]byte, 255)
-	var string_length int
-	for i, _ := range buffer {
-		temp_char, err := reader.ReadByte()
-		if err != nil {
-			log.Println("Error:", err.Error())
-			return ""
-		}
-		if temp_char == 0 {
-			string_length = i + 1
-			break
-		}
-		buffer[i] = temp_char
+// TODO(rhett): We will remove some parameters as they become unnecessary
+func HandlePacket(data []byte, dataLength int, remoteAddress *net.UDPAddr,  packetCount int, isFromClient bool) {
+	var temp_str string
+	if isFromClient {
+		temp_str = "c"
+	} else {
+		temp_str = "s"
 	}
-	return string(buffer[:string_length])
+	f, err := os.Create(temp_str + strconv.Itoa(packetCount) + "_" + IdentifyPacketName(data[:dataLength]) + ".bin")
+	if err != nil {
+		log.Fatalln("[X] Unable to create file:", err.Error())
+	}
+	_, err = f.Write(data[0:dataLength])
+	if err != nil {
+		log.Fatalln("[X] Unable to write to file:", err.Error())
+	}
+	err = f.Close()
+	if err != nil {
+		log.Fatalln("[X] Unable to close file:", err.Error())
+	}
+	packetCount += 1
+	log.Printf("[*] (%s) Recieved %d bytes: \n%s\n", remoteAddress, dataLength, hex.Dump(data[:dataLength]))
+
+	InterceptPacket(data[:dataLength])
+
 }
 
-func IdentifyPacketName(reader *bytes.Reader) string {
+func InterceptPacket(data []byte) {
+	reader := bytes.NewReader(data[:])
 	opcode := ReadUint16be(reader)
 	for k, v := range corePacketTypeMap {
 		if opcode == k {
 			// TODO(rhett): 
-			result := v.Parse(reader)
+			result := v.Parse(reader, 0, 0, false, nil)
 			if result != nil {
 				fmt.Println()
-				log.Printf("=== %s ========================\n", v.name)
+				log.Printf("=== [ %#x ] %s ========================\n", opcode, v.name)
 				for k, v := range result {
 					log.Printf("- %-24s: %v\n", k, v)
 				}
 				fmt.Println()
 			}
+		}
+	}
+}
+
+func IdentifyPacketName(data []byte) string {
+	reader := bytes.NewReader(data[:])
+	opcode := ReadUint16be(reader)
+	for k, v := range corePacketTypeMap {
+		if opcode == k {
 			return v.name
 		}
 	}
