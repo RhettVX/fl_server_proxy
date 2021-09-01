@@ -1,3 +1,3 @@
-module fl_network_proxy
+module fl_server_proxy
 
 go 1.17
