@@ -7,26 +7,26 @@ import (
 )
 
 
-func ReadUint8(reader *bytes.Reader) uint8 {
-	result, _ := reader.ReadByte()
+func ReadUint8(byteBuffer *bytes.Buffer) uint8 {
+	result, _ := byteBuffer.ReadByte()
 	return result
 }
 
-func ReadUint16be(reader *bytes.Reader) (result uint16) {
-	binary.Read(reader, binary.BigEndian, &result)
+func ReadUint16be(byteBuffer *bytes.Buffer) (result uint16) {
+	binary.Read(byteBuffer, binary.BigEndian, &result)
 	return result
 }
 
-func ReadUint32be(reader *bytes.Reader) (result uint32) {
-	binary.Read(reader, binary.BigEndian, &result)
+func ReadUint32be(byteBuffer *bytes.Buffer) (result uint32) {
+	binary.Read(byteBuffer, binary.BigEndian, &result)
 	return result
 }
 
-func ReadNullTerminatedString(reader *bytes.Reader) string {
+func ReadNullTerminatedString(byteBuffer *bytes.Buffer) string {
 	buffer := make([]byte, 255)
 	var string_length int
 	for i, _ := range buffer {
-		temp_char, err := reader.ReadByte()
+		temp_char, err := byteBuffer.ReadByte()
 		if err != nil {
 			log.Println("Error:", err.Error())
 			return ""

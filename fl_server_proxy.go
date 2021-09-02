@@ -54,6 +54,8 @@ func main() {
 	proxyIP  := net.UDPAddr{IP: []byte{127,0,0,1},     Port: 20042, Zone: ""}
 	serverIP := net.UDPAddr{IP: []byte{64,37,174,149}, Port: 20042, Zone: ""}
 
+	InitPackets()
+
 
 	// NOTE(rhett): Listen for initial connection
 	initialListener, err := net.ListenUDP("udp", &proxyIP)
