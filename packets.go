@@ -13,7 +13,7 @@ import (
 
 type CorePacket struct {
 	name string
-	Parse func(*bytes.Buffer, int, int, bool, interface{}) map[string]interface{}
+	Parse func(*bytes.Buffer, int, int, bool, []map[string]interface{}) map[string]interface{}
 }
 
 var corePacketTypeMap map[uint16]CorePacket
@@ -23,7 +23,7 @@ func InitPackets() {
 	corePacketTypeMap = map[uint16]CorePacket {
 		0x0001: CorePacket {
 			name: "SessionRequest",
-			Parse: func(byteBuffer *bytes.Buffer, crcSeed, compression int, isSubPacket bool, appData interface{}) map[string]interface{} {
+			Parse: func(byteBuffer *bytes.Buffer, crcSeed, compression int, isSubPacket bool, appData []map[string]interface{}) map[string]interface{} {
 				clientCRCLength := ReadUint32be(byteBuffer)
 				clientSessionID := ReadUint32be(byteBuffer)
 				clientUDPLength := ReadUint32be(byteBuffer)
@@ -40,7 +40,7 @@ func InitPackets() {
 		},
 		0x0002: CorePacket {
 			name: "SessionReply",
-			Parse: func(byteBuffer *bytes.Buffer, crcSeed, compression int, isSubPacket bool, appData interface{}) map[string]interface{} {
+			Parse: func(byteBuffer *bytes.Buffer, crcSeed, compression int, isSubPacket bool, appData []map[string]interface{}) map[string]interface{} {
 				serverSessionID := ReadUint32be(byteBuffer)
 				serverCRCSeed := ReadUint32be(byteBuffer)
 				serverCRCLength := ReadUint8(byteBuffer)
@@ -59,27 +59,31 @@ func InitPackets() {
 		},
 		0x0003: CorePacket {
 			name: "MultiPacket",
-			Parse: func(byteBuffer *bytes.Buffer, crcSeed, compression int, isSubPacket bool, appData interface{}) map[string]interface{} {
-				offset := 2
-				test := ReadUint16be(byteBuffer)
-				log.Println(test, "HHHHHHHHHJSSSSSSSSSSKLDFLLFKJDFLKJDFLJSLDFKJSOLDKFJ")
-				// dataLength := 0
-				if compression != 0 {
-					offset += 1
-				}
+			Parse: func(byteBuffer *bytes.Buffer, crcSeed, compression int, isSubPacket bool, appData []map[string]interface{}) map[string]interface{} {
+				// var dataLength uint8 = 0
+				// offset := 0
 
-				// for offset < byteBuffer.Len() - 2 {
-
-				// 	dataLength := ReadUint8
-
-				// 	offset += 1
-				// 	_, packetName, _ :=ParsePacket(byteBuffer.Bytes()[offset:offset+0], crcSeed, compression, true, appData)
-				// 	log.Println("AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA+++++++++++++++++++++++++++++ ", packetName)
-				// 	// offset += 0
-				// 	break
+				// if compression != 0 {
+				// 	// TODO(rhett): Skip 1 byte
+				// 	ReadUint8(byteBuffer)
+				// 	offset = 1
 				// }
 
-				// dataLength := 0
+				// for offset < byteBuffer.Len() {
+				// 	dataLength = ReadUint8(byteBuffer)
+				// 	offset += 1
+				// 	// numBytes := 0
+
+				// 	if dataLength == 0xff {
+				// 		log.Fatalln("UH OH")
+				// 	}
+				// 	// numBytes = 1
+				// 	ReadUint8(byteBuffer)
+				// 	offset += 1
+
+				// 	ParsePacket(byteBuffer.Bytes()[offset:], crcSeed, compression, true, appData)
+				// 	break
+				// }
 				log.Println("[!] Not implemented.")
 				var empty map[string]interface{}
 				return empty
@@ -87,7 +91,7 @@ func InitPackets() {
 		},
 		0x0005: CorePacket {
 			name: "Disconnect",
-			Parse: func(byteBuffer *bytes.Buffer, crcSeed, compression int, isSubPacket bool, appData interface{}) map[string]interface{} {
+			Parse: func(byteBuffer *bytes.Buffer, crcSeed, compression int, isSubPacket bool, appData []map[string]interface{}) map[string]interface{} {
 				log.Println("[!] Not implemented.")
 				var empty map[string]interface{}
 				return empty
@@ -95,7 +99,7 @@ func InitPackets() {
 		},
 		0x0006: CorePacket {
 			name: "Ping",
-			Parse: func(byteBuffer *bytes.Buffer, crcSeed, compression int, isSubPacket bool, appData interface{}) map[string]interface{} {
+			Parse: func(byteBuffer *bytes.Buffer, crcSeed, compression int, isSubPacket bool, appData []map[string]interface{}) map[string]interface{} {
 				log.Println("[!] Not implemented.")
 				var empty map[string]interface{}
 				return empty
@@ -103,7 +107,7 @@ func InitPackets() {
 		},
 		0x0007: CorePacket {
 			name: "NetStatusRequest",
-			Parse: func(byteBuffer *bytes.Buffer, crcSeed, compression int, isSubPacket bool, appData interface{}) map[string]interface{} {
+			Parse: func(byteBuffer *bytes.Buffer, crcSeed, compression int, isSubPacket bool, appData []map[string]interface{}) map[string]interface{} {
 				log.Println("[!] Not implemented.")
 				var empty map[string]interface{}
 				return empty
@@ -111,7 +115,7 @@ func InitPackets() {
 		},
 		0x0008: CorePacket {
 			name: "NetStatusReply",
-			Parse: func(byteBuffer *bytes.Buffer, crcSeed, compression int, isSubPacket bool, appData interface{}) map[string]interface{} {
+			Parse: func(byteBuffer *bytes.Buffer, crcSeed, compression int, isSubPacket bool, appData []map[string]interface{}) map[string]interface{} {
 				log.Println("[!] Not implemented.")
 				var empty map[string]interface{}
 				return empty
@@ -119,7 +123,7 @@ func InitPackets() {
 		},
 		0x0009: CorePacket {
 			name: "Data",
-			Parse: func(byteBuffer *bytes.Buffer, crcSeed, compression int, isSubPacket bool, appData interface{}) map[string]interface{} {
+			Parse: func(byteBuffer *bytes.Buffer, crcSeed, compression int, isSubPacket bool, appData []map[string]interface{}) map[string]interface{} {
 				log.Println("[!] Not implemented.")
 				var empty map[string]interface{}
 				return empty
@@ -127,7 +131,37 @@ func InitPackets() {
 		},
 		0x000d: CorePacket {
 			name: "DataFragment",
-			Parse: func(byteBuffer *bytes.Buffer, crcSeed, compression int, isSubPacket bool, appData interface{}) map[string]interface{} {
+			Parse: func(byteBuffer *bytes.Buffer, crcSeed, compression int, isSubPacket bool, appData []map[string]interface{}) map[string]interface{} {
+				// TODO(rhett): Doing this weirdly for now
+				dataSnapshot := byteBuffer.Bytes()
+				if compression != 0 && !isSubPacket {
+					// TODO(rhett): Skip 1 bytes
+					ReadUint8(byteBuffer)
+				}
+
+				sequence := ReadUint16be(byteBuffer)
+				fragmentEnd := len(dataSnapshot)
+				if !isSubPacket {
+					fragmentEnd -= 2
+				}
+
+				var crc uint16 = 0
+				if !isSubPacket {
+					crc = ReadUint16be(bytes.NewBuffer(dataSnapshot[fragmentEnd:]))
+				}
+
+				dataOffset := 2
+				if compression != 0 && !isSubPacket {
+					dataOffset += 1
+				}
+
+				data := dataSnapshot[dataOffset:fragmentEnd]
+
+				log.Printf("%d\n", sequence)
+				log.Printf("%d\n", fragmentEnd)
+				log.Printf("%x\n", crc)
+				log.Printf("\n%s\n", hex.Dump(data[:]))
+
 				log.Println("[!] Not implemented.")
 				var empty map[string]interface{}
 				return empty
@@ -135,7 +169,7 @@ func InitPackets() {
 		},
 		0x0011: CorePacket {
 			name: "OutOfOrder",
-			Parse: func(byteBuffer *bytes.Buffer, crcSeed, compression int, isSubPacket bool, appData interface{}) map[string]interface{} {
+			Parse: func(byteBuffer *bytes.Buffer, crcSeed, compression int, isSubPacket bool, appData []map[string]interface{}) map[string]interface{} {
 				log.Println("[!] Not implemented.")
 				var empty map[string]interface{}
 				return empty
@@ -143,7 +177,7 @@ func InitPackets() {
 		},
 		0x0015: CorePacket {
 			name: "Ack",
-			Parse: func(byteBuffer *bytes.Buffer, crcSeed, compression int, isSubPacket bool, appData interface{}) map[string]interface{} {
+			Parse: func(byteBuffer *bytes.Buffer, crcSeed, compression int, isSubPacket bool, appData []map[string]interface{}) map[string]interface{} {
 				log.Println("[!] Not implemented.")
 				var empty map[string]interface{}
 				return empty
@@ -151,7 +185,7 @@ func InitPackets() {
 		},
 		0x001d: CorePacket {
 			name: "FatalError",
-			Parse: func(byteBuffer *bytes.Buffer, crcSeed, compression int, isSubPacket bool, appData interface{}) map[string]interface{} {
+			Parse: func(byteBuffer *bytes.Buffer, crcSeed, compression int, isSubPacket bool, appData []map[string]interface{}) map[string]interface{} {
 				log.Println("[!] Not implemented.")
 				var empty map[string]interface{}
 				return empty
@@ -159,7 +193,7 @@ func InitPackets() {
 		},
 		0x001e: CorePacket {
 			name: "FatalErrorReply",
-			Parse: func(byteBuffer *bytes.Buffer, crcSeed, compression int, isSubPacket bool, appData interface{}) map[string]interface{} {
+			Parse: func(byteBuffer *bytes.Buffer, crcSeed, compression int, isSubPacket bool, appData []map[string]interface{}) map[string]interface{} {
 				log.Println("[!] Not implemented.")
 				var empty map[string]interface{}
 				return empty
@@ -170,6 +204,8 @@ func InitPackets() {
 
 // TODO(rhett): We will remove some parameters as they become unnecessary
 func HandlePacket(data []byte, dataLength int, remoteAddress *net.UDPAddr,  packetCount int, isFromClient bool) {
+	// log.Printf("[*] (%s) Recieved %d bytes: \n%s\n", remoteAddress, dataLength, hex.Dump(data[:dataLength]))
+	log.Printf("[*] (%s) Recieved %d bytes\n", remoteAddress, dataLength)
 	packetType, packetName, packetResult := ParsePacket(data[:dataLength], 0, 0x0100, false, nil)
 	fmt.Println()
 	log.Printf("=== [ %#x ] %s ========================\n", packetType, packetName)
@@ -197,7 +233,6 @@ func HandlePacket(data []byte, dataLength int, remoteAddress *net.UDPAddr,  pack
 		log.Fatalln("[X] Unable to close file:", err.Error())
 	}
 	packetCount += 1
-	log.Printf("[*] (%s) Recieved %d bytes: \n%s\n", remoteAddress, dataLength, hex.Dump(data[:dataLength]))
 }
 
 func ParsePacket(data        []byte,
