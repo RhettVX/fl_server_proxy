@@ -1,8 +1,11 @@
+#ifdef FL_WIN32
+
 #define WIN32_LEAN_AND_MEAN
 #include <windows.h>
 
 #include "base.h"
 #include "internal.h"
+#include "os.h"
 
 
 //----------------------------------------------------------------
@@ -153,11 +156,18 @@ win32_local_time_as_string8()
     SYSTEMTIME log_time;
     GetLocalTime(&log_time);
 
-    char* time_buffer = (char*)malloc(256);
+    // NOTE(rhett): The length of the time string should never change
+    local_persist char time_buffer[256];
     sprintf(time_buffer,
             "%d-%02d-%02d %02d:%02d:%02d:%03d",
             log_time.wYear, log_time.wDay, log_time.wMonth,
             log_time.wHour, log_time.wMinute, log_time.wSecond, log_time.wMilliseconds);
 
     return strings_cstring_to_string8(time_buffer);
+    //================================================================
+    //================================================================
+    //================================================================
+    // TODO(rhett): Stop converting to a string 8. just do it once
     }
+
+#endif //FL_WIN32

@@ -9,11 +9,11 @@ log_printf(char* format_string, ...)
     va_list args;
     va_start(args, format_string);
 
-    // char message_buffer[4096] = {0};
-    // vsnprintf(message_buffer, sizeof(message_buffer), format_string, args);
+    char message_buffer[4096] = {0};
+    vsnprintf(message_buffer, sizeof(message_buffer), format_string, args);
 
-    String8 log_time = win32_local_time_as_string();
-    // printf("[%s] %s", log_time.content, message_buffer);
+    String8 log_time = os_local_time_as_string8();
+    printf("[%s] %s", log_time.content, message_buffer);
 
     va_end(args);
     }

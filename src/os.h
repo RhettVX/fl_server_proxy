@@ -5,6 +5,9 @@
 #define OS_MAX_PATH_LENGTH 256
 
 
+typedef struct win32_socket win32_socket;
+
+
 //// Memory functions
 extern void* 
 os_memory_alloc(u32 size);
@@ -53,6 +56,13 @@ os_local_time_as_string8();
 
     extern String8
     win32_local_time_as_string8();
+
+    //// Networking
+    extern win32_socket*
+    win32_net_udp_listener_create(char* address, char* port);
+
+    extern u32
+    win32_net_udp_listener_recieve(win32_socket* socket, u8* buffer, u32 buffer_size);
 #endif // FL_WIN32
 
 //================================================================
@@ -67,7 +77,7 @@ os_local_time_as_string8();
 #define os_load_entire_file(s,ptr,sz)     win32_load_entire_file(s,ptr,sz)
 #define os_write_buffer_to_file(s,ptr,sz) win32_write_buffer_to_file(s,ptr,sz)
 #define os_create_folder(s)               win32_create_folder(s)
-// #define os_local_time_as_string8()        win32_local_time_as_string8()  
+#define os_local_time_as_string8()        win32_local_time_as_string8()  
 
 
 #endif // OS_H
