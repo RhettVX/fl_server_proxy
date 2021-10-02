@@ -19,15 +19,20 @@
 #define MAX(a, b) (a > b ? a : b)
 
 #include <stdio.h>
-#define eval_print_u8(x)   printf("%s = %u:%xh\n",#x,(u8)x,(u8)x)
-#define eval_print_i8(x)   printf("%s = %d:%xh\n",#x,(i8)x,(i8)x)
-#define eval_print_u16(x)  printf("%s = %u:%xh\n",#x,(u16)x,(u16)x)
-#define eval_print_i16(x)  printf("%s = %d:%xh\n",#x,(i16)x,(i16)x)
-#define eval_print_u32(x)  printf("%s = %u:%xh\n",#x,(u32)x,(u32)x)
-#define eval_print_i32(x)  printf("%s = %d:%xh\n",#x,(i32)x,(i32)x)
-#define eval_print_u64(x)  printf("%s = %llu:%llxh\n",#x,(u64)x,(u64)x)
-#define eval_print_i64(x)  printf("%s = %lld:%llxh\n",#x,(i64)x,(i64)x)
-#define eval_print_cstr(x) printf("%s = \"%s\"\n",#x,x)
+#define EVAL_PRINT_U8(x)   printf("%s = %u:%xh\n",#x,(u8)x,(u8)x)
+#define EVAL_PRINT_I8(x)   printf("%s = %d:%xh\n",#x,(i8)x,(i8)x)
+#define EVAL_PRINT_U16(x)  printf("%s = %u:%xh\n",#x,(u16)x,(u16)x)
+#define EVAL_PRINT_I16(x)  printf("%s = %d:%xh\n",#x,(i16)x,(i16)x)
+#define EVAL_PRINT_U32(x)  printf("%s = %u:%xh\n",#x,(u32)x,(u32)x)
+#define EVAL_PRINT_I32(x)  printf("%s = %d:%xh\n",#x,(i32)x,(i32)x)
+#define EVAL_PRINT_U64(x)  printf("%s = %llu:%llxh\n",#x,(u64)x,(u64)x)
+#define EVAL_PRINT_I64(x)  printf("%s = %lld:%llxh\n",#x,(i64)x,(i64)x)
+#define EVAL_PRINT_CSTR(x) printf("%s = \"%s\"\n",#x,x)
+
+#define ARRAY_COUNT(a) sizeof(a) / sizeof(a[0])
+#define STRINGIFY_(x)  #x
+#define STRINGIFY(x)   STRINGIFY_(x)
+
 
 //================================================================
 #include <stdlib.h>

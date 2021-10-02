@@ -4,16 +4,28 @@
 
 
 void
-log_printf(char* format_string, ...)
+#ifdef FL_LOG_EXTRA
+log_printf_internal(char* format_string, char* f, uint l, ...)
+#else
+log_printf_internal(char* format_string, ...)
+#endif // FL_LOG_EXTRA
     {
     va_list args;
+    #ifdef FL_LOG_EXTRA
+    va_start(args, l);
+    #else
     va_start(args, format_string);
+    #endif // FL_LOG_EXTRA
 
     char message_buffer[4096] = {0};
     vsnprintf(message_buffer, sizeof(message_buffer), format_string, args);
 
     String8 log_time = os_local_time_as_string8();
+    #ifdef FL_LOG_EXTRA
+    printf("[%s] <%s(%d)> %s", log_time.content, f, l, message_buffer);
+    #else
     printf("[%s] %s", log_time.content, message_buffer);
+    #endif // FL_LOG_EXTRA
 
     va_end(args);
     }
@@ -53,6 +65,11 @@ util_byte_dump(void* data, uint length)
         for (uint j = 0; j < bytes_per_line; ++j)
             {
             char byte = *(char*)((uptr)data + (i*bytes_per_line+j));
+            if (!(bytes_per_line % 2) && j == bytes_per_line / 2)
+                {
+                putchar(' ');
+                }
+            
             if (byte < '!' || byte > '~')
                 {
                 byte = '.';

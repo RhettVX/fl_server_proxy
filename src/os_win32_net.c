@@ -8,95 +8,142 @@
 #include "internal.h"
 #include "os.h"
 
+#define LOCAL_ADDR  "127.0.0.1"
+#define LOCAL_PORT  20042
 
-// typedef struct win32_socket win32_socket;
-struct win32_socket
-    {
-    SOCKET socket;
-    };
-
-
-global b32 is_wsa_initialized = 0;
+#define SERVER_ADDR "lvspsn-tst-l01.planetside2.com"
+#define SERVER_PORT 20042
 
 
 void
-win32_net_wsa_startup()
+win32_net_test_function()
     {
-    if (is_wsa_initialized)
-        {
-        log_printf("[!] WSA already initialized.\n");
-        return;
-        }
-
     WSADATA wsa_data;
-    int result = WSAStartup(MAKEWORD(2, 2), &wsa_data);
-    if (result != NO_ERROR)
+    int wsa_startup_result = WSAStartup(MAKEWORD(2, 2), &wsa_data);
+    if (wsa_startup_result)
         {
-        log_printf("[X] WSAStartup failed: %d\n", result);
-        abort();
-        }
-    is_wsa_initialized = 1;
-    }
-
-win32_socket*
-win32_net_udp_listener_create(char* address, char* port)
-    {
-    if (!is_wsa_initialized)
-        {
-        win32_net_wsa_startup();
+        log_printf("[X] WSAStartup failed: %d\n", wsa_startup_result);
+        goto abort;
         }
 
-    struct addrinfo hints = {.ai_family   = AF_INET,
-                             .ai_socktype = SOCK_DGRAM,
-                             .ai_protocol = IPPROTO_UDP,
-                             .ai_flags    = AI_PASSIVE};
-
-    struct addrinfo* addr_result;
-    int result = getaddrinfo(address, port, &hints, &addr_result);
-    if (result != 0)
+    //----------------------------------------------------------------
+    // Client listener
+    //----------------------------------------------------------------
+    SOCKET client_listener_socket;
+    client_listener_socket = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
+    if (client_listener_socket == INVALID_SOCKET)
         {
-        log_printf("[X] getaddrinfo failed: %d\n", result);
-        WSACleanup();
-        abort();
+        log_printf("[X] socket failed: %d\n", WSAGetLastError());
+        goto abort;
         }
 
-    SOCKET listen_socket = INVALID_SOCKET;
-    listen_socket = socket(addr_result->ai_family, addr_result->ai_socktype, addr_result->ai_protocol);
-    if (listen_socket == INVALID_SOCKET)
-        {
-        log_printf("[X] Error creating socket: %d\n", WSAGetLastError());
-        freeaddrinfo(addr_result);
-        WSACleanup();
-        abort();
-        }
-
-    result = bind(listen_socket, addr_result->ai_addr, addr_result->ai_addrlen);
-    if (result == SOCKET_ERROR)
+    SOCKADDR_IN client_listener_addr = {.sin_family      = AF_INET,
+                                        .sin_port        = htons(LOCAL_PORT),
+                                        .sin_addr.s_addr = inet_addr(LOCAL_ADDR)};
+    int bind_result = bind(client_listener_socket,
+                           (SOCKADDR*)&client_listener_addr, sizeof(client_listener_addr));
+    if (bind_result == SOCKET_ERROR)
         {
         log_printf("[X] bind failed: %d\n", WSAGetLastError());
-        freeaddrinfo(addr_result);
-        closesocket(listen_socket);
-        WSACleanup();
-        abort();
+        goto abort_client_socket;
+        }
+    //================================================================
+
+    //----------------------------------------------------------------
+    // Server sender
+    //----------------------------------------------------------------
+    ADDRINFO* server_sender_addr;
+    ADDRINFO hints = {.ai_family   = AF_INET,
+                      .ai_socktype = SOCK_DGRAM,
+                      .ai_protocol = IPPROTO_UDP};
+    int getaddrinfo_result = getaddrinfo(SERVER_ADDR, STRINGIFY(SERVER_PORT), &hints, &server_sender_addr);
+    if (getaddrinfo_result)
+        {
+        log_printf("[X] getaddrinfo failed: %d\n", getaddrinfo_result);
+        goto abort_client_socket;
         }
 
-    local_persist win32_socket return_result = {0};
-    return_result.socket = listen_socket;
-    return &return_result;
-    }
+    SOCKET server_sender_socket;
+    server_sender_socket = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
+    if (server_sender_socket == INVALID_SOCKET)
+        {
+        log_printf("[X] socket failed: %d\n", WSAGetLastError());
+        goto abort_server_addr;
+        }
 
-u32
-win32_net_udp_listener_recieve(win32_socket* socket, u8* buffer, u32 buffer_size)
-    {
-    int result = recv(socket->socket, buffer, buffer_size, 0);
-    if (result == SOCKET_ERROR)
+    int connect_result = connect(server_sender_socket,
+                                 server_sender_addr->ai_addr, server_sender_addr->ai_addrlen);
+    if (connect_result == SOCKET_ERROR)
+        {
+        log_printf("[X] connect failed: %d\n", WSAGetLastError());
+        goto abort_server_socket;
+        }
+    //================================================================
+
+    //----------------------------------------------------------------
+    // Server listener
+    //----------------------------------------------------------------
+    u8 buffer[512] = {0};
+
+    SOCKADDR from_addr;
+    int from_length = sizeof(from_addr);
+    int recv_result = recvfrom(client_listener_socket, buffer, sizeof(buffer), 0, &from_addr, &from_length);
+    if (recv_result == SOCKET_ERROR)
+        {
+        log_printf("[X] recvfrom failed: %d\n", WSAGetLastError());
+        goto abort_server_socket;
+        }
+    log_printf("[*] Recieved %d bytes\n", recv_result);
+    util_byte_dump(buffer, recv_result);
+
+    log_printf("[*] Forwarding...\n");
+    int send_result = send(server_sender_socket, buffer, recv_result, 0);
+    if (send_result == SOCKET_ERROR)
+        {
+        log_printf("[X] send failed: %d\n", WSAGetLastError());
+        goto abort_server_socket;
+        }
+    log_printf("[*] Sent %d bytes\n", send_result);
+
+    recv_result = recv(server_sender_socket, buffer, sizeof(buffer), 0);
+    if (recv_result == SOCKET_ERROR)
         {
         log_printf("[X] recv failed: %d\n", WSAGetLastError());
-        closesocket(socket->socket);
-        WSACleanup();
-        abort();
+        goto abort_server_socket;
         }
-    return result;
+    log_printf("[*] Recieved %d bytes\n", recv_result);
+    util_byte_dump(buffer, recv_result);
+
+    log_printf("[*] Forwarding...\n");
+    send_result = sendto(client_listener_socket, buffer, recv_result, 0, &from_addr, from_length);
+    if (send_result == SOCKET_ERROR)
+        {
+        log_printf("[X] sendto failed: %d\n", WSAGetLastError());
+        goto abort_server_socket;
+        }
+    log_printf("[*] Sent %d bytes\n", send_result);
+
+    recv_result = recv(client_listener_socket, buffer, sizeof(buffer), 0);
+    if (recv_result == SOCKET_ERROR)
+        {
+        log_printf("[X] recv failed: %d\n", WSAGetLastError());
+        goto abort_server_socket;
+        }
+    log_printf("[*] Recieved %d bytes\n", recv_result);
+    util_byte_dump(buffer, recv_result);
+
+    WSACleanup();
+    return;
+abort_server_socket:
+    closesocket(server_sender_socket);
+abort_server_addr:
+    freeaddrinfo(server_sender_addr);
+abort_client_socket:
+    closesocket(client_listener_socket);
+abort:
+    WSACleanup();
+    abort();
     }
+
 
 #endif //FL_WIN32

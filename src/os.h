@@ -4,8 +4,15 @@
 
 #define OS_MAX_PATH_LENGTH 256
 
-
-typedef struct win32_socket win32_socket;
+#ifdef FL_WIN32
+    // TODO(rhett): This works for now
+    // NOTE(rhett): Example: 127, 0, 0, 1, 80 
+    #define WIN32_SINADDR_AS_ARGS(addr) addr.sin_addr.S_un.S_un_b.s_b1,\
+                                        addr.sin_addr.S_un.S_un_b.s_b2,\
+                                        addr.sin_addr.S_un.S_un_b.s_b3,\
+                                        addr.sin_addr.S_un.S_un_b.s_b4,\
+                                        ntohs(addr.sin_port)
+#endif // FL_WIN32
 
 
 //// Memory functions
@@ -58,11 +65,8 @@ os_local_time_as_string8();
     win32_local_time_as_string8();
 
     //// Networking
-    extern win32_socket*
-    win32_net_udp_listener_create(char* address, char* port);
-
-    extern u32
-    win32_net_udp_listener_recieve(win32_socket* socket, u8* buffer, u32 buffer_size);
+    extern void
+    win32_net_test_function();
 #endif // FL_WIN32
 
 //================================================================

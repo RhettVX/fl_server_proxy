@@ -36,7 +36,17 @@ endian_get_u32_be(u8* data);
 // Util
 //----------------------------------------------------------------
 extern void
-log_printf(char* format_string, ...);
+#ifdef FL_LOG_EXTRA
+log_printf_internal(char* format_string, char* f, uint l, ...);
+#else
+log_printf_internal(char* format_string, ...);
+#endif // FL_LOG_EXTRA
+
+#ifdef FL_LOG_EXTRA
+#define log_printf(x, ...) log_printf_internal(x, __FILE__, __LINE__, __VA_ARGS__)
+#else
+#define log_printf(x, ...) log_printf_internal(x, __VA_ARGS__)
+#endif // FL_LOG_EXTRA
 
 extern void
 util_byte_dump(void* data, uint length);
