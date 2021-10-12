@@ -26,6 +26,7 @@ struct proxy_client_args
 struct proxy_server_args
     {
     win32_net_socket*  server_communication_socket;
+    win32_net_socket*  client_communication_socket;
     win32_net_address* game_client_address;
     };
 
@@ -73,7 +74,7 @@ start:
         printf("[*] Received %d bytes from server\n", recv_length);
         util_byte_dump(buffer, recv_length);
 
-        u32 send_length = win32_net_send_to(args->server_communication_socket, args->game_client_address, buffer, recv_length);
+        u32 send_length = win32_net_send_to(args->client_communication_socket, args->game_client_address, buffer, recv_length);
         if (!send_length)
             {
             printf("[!] Error sending packet to client\n");
@@ -134,10 +135,11 @@ main(void)
         }
 
     struct proxy_client_args client_args = {.client_communication_socket = client_communication_socket,
-                                .server_communication_socket = server_communication_socket};
+                                            .server_communication_socket = server_communication_socket};
 
     struct proxy_server_args server_args = {.server_communication_socket = server_communication_socket,
-                                .game_client_address         = game_client_address};
+                                            .client_communication_socket = client_communication_socket,
+                                            .game_client_address         = game_client_address};
 
     printf("Thread 1:\n");
     HANDLE client_thread = (HANDLE)_beginthread(proxy_client_connection, 0, &client_args);
@@ -146,45 +148,6 @@ main(void)
     WaitForSingleObject(client_thread, INFINITE);
     WaitForSingleObject(server_thread, INFINITE);
 
-    // for (;;)
-    //     {
-    //     u32 recv_length = win32_net_recieve_from(client_communication_socket, game_client_address,
-    //                                              buffer, sizeof(buffer));
-    //     if (!recv_length)
-    //         {
-    //         goto abort_recv_address;
-    //         }
-    //     printf("[*] Received %d bytes from game client.\n", recv_length);
-    //     util_byte_dump(buffer, recv_length);
-    //     // local_persist char dump_name[128] = {0};
-    //     // sprintf(dump_name, "packets\\c_packet_%d.bin", packet_counter++);
-    //     // os_write_buffer_to_file(dump_name, buffer, recv_length);
-    //     // memset(buffer, 0, sizeof(buffer));
-
-    //     u32 send_length = win32_net_send(server_communication_socket,
-    //                                      buffer, recv_length);
-    //     if (!send_length)
-    //         {
-    //         goto abort_recv_address;
-    //         }
-    //     printf("[*] Forwarded %d bytes to server.\n", send_length);
-
-    //     recv_length = win32_net_recieve(server_communication_socket,
-    //                                     buffer, sizeof(buffer));
-    //     printf("[*] Received %d bytes from server.\n", recv_length);
-    //     util_byte_dump(buffer, recv_length);
-    //     // sprintf(dump_name, "packets\\s_packet_%d.bin", packet_counter++);
-    //     // os_write_buffer_to_file(dump_name, buffer, recv_length);
-    //     // memset(buffer, 0, sizeof(buffer));
-
-    //     send_length = win32_net_send_to(client_communication_socket, game_client_address,
-    //                                     buffer, recv_length);
-    //     if (!send_length)
-    //         {
-    //         goto abort_recv_address;
-    //         }
-    //     printf("[*] Forwarded %d bytes to game client.\n", recv_length);
-    //     }
 
     goto abort_recv_address;
     debug_allocation_check_for_unfreed_memory();
