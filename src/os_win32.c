@@ -8,6 +8,13 @@
 #include "os.h"
 
 
+#ifdef FL_DEBUG
+    #ifdef FL_DEBUG_ERRORS_ONLY
+        #define printf (void)sizeof
+    #endif // FL_DEBUG_ERRORS_ONLY
+#endif // FL_DEBUG
+
+
 //----------------------------------------------------------------
 // Memory functions
 //----------------------------------------------------------------

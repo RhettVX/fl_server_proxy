@@ -15,7 +15,7 @@ debug_allocation_register(void* pointer, uint line, char* file)
     {
     if (debug_allocation_table_global.count == debug_allocation_table_global.capacity)
         {
-        printf("[X] Exceeded max allocations! capacity=%u, count=%u; %s(%u)\n",
+        printf("Exceeded max allocations! capacity=%u, count=%u; %s(%u)\n",
                debug_allocation_table_global.capacity,
                debug_allocation_table_global.count,
                file,
@@ -42,7 +42,7 @@ debug_allocation_mark_as_freed(void* pointer, uint line, char* file)
     AllocationEntry* entry = debug_allocation_get_by_pointer(pointer);
     if (entry == 0)
         {
-        printf("[X] Attempting to free a pointer that has not been allocated! address=%p; %s(%u)\n",
+        printf("Attempting to free a pointer that has not been allocated! address=%p; %s(%u)\n",
                pointer,
                file,
                line);
@@ -52,7 +52,7 @@ debug_allocation_mark_as_freed(void* pointer, uint line, char* file)
     // NOTE(rhett): Attempt to free a pointer that has already been freed
     if (entry->has_been_freed)
         {
-        printf("[X] Attempting to free a pointer that has already been freed! address=%p; %s(%u)\n",
+        printf("Attempting to free a pointer that has already been freed! address=%p; %s(%u)\n",
                pointer,
                file,
                line);
@@ -74,7 +74,7 @@ debug_allocation_get_by_pointer(void* pointer)
             }
         }
     // TODO(rhett): Should this be a fatal error alone?
-    printf("[!] Unable to get allocation entry by pointer! address=%p\n", pointer);
+    printf("Unable to get allocation entry by pointer! address=%p\n", pointer);
     return 0;
     }
 
@@ -85,7 +85,7 @@ debug_allocation_check_for_unfreed_memory()
         {
         if (!debug_allocation_table_global.entries[i].has_been_freed)
             {
-            printf("[!] Memory located at %p has not yet been freed!; %s(%u)\n",
+            printf("Memory located at %p has not yet been freed!; %s(%u)\n",
                    debug_allocation_table_global.entries[i].pointer,
                    debug_allocation_table_global.entries[i].origin_file,
                    debug_allocation_table_global.entries[i].origin_line);

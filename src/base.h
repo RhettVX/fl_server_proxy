@@ -10,6 +10,9 @@
 #define global        static
 #define dll_external  extern __declspec(dllexport)
 
+#define TRUE  1
+#define FALSE 0
+
 #define KB(n) (n << 10)
 #define MB(n) (n << 20)
 #define GB(n) ((u64)n << 30)
