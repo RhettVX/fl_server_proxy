@@ -34,6 +34,8 @@ void
 proxy_client_connection(struct proxy_client_args* args)
     {
     u8 buffer[PACKET_LENGTH] = {0};
+    u8 dump_name[128] = {0};
+    u32 packet_counter = 0;
     for (;;)
         {
 // TODO(rhett): Check if this label needs to be before the for loop
@@ -45,7 +47,10 @@ start:
             goto start;
             }
         printf("[*] Received %d bytes from client\n", recv_length);
+        print_packet_type(endian_get_u16_be(buffer));
         util_byte_dump(buffer, recv_length);
+        sprintf(dump_name, "packets\\c_packet_%d.bin\0", packet_counter++);
+        win32_write_buffer_to_file(dump_name, buffer, recv_length);
 
         u32 send_length = win32_net_send(args->server_communication_socket, buffer, recv_length);
         if (!send_length)
@@ -61,9 +66,10 @@ void
 proxy_server_connection(struct proxy_server_args* args)
     {
     u8 buffer[PACKET_LENGTH] = {0};
+    u8 dump_name[128] = {0};
+    u32 packet_counter = 0;
     for (;;)
         {
-// TODO(rhett): Check if this label needs to be before the for loop
 start:
         u32 recv_length = win32_net_recieve(args->server_communication_socket, buffer, sizeof(buffer));
         if (!recv_length)
@@ -72,7 +78,10 @@ start:
             goto start;
             }
         printf("[*] Received %d bytes from server\n", recv_length);
+        print_packet_type(endian_get_u16_be(buffer));
         util_byte_dump(buffer, recv_length);
+        sprintf(dump_name, "packets\\s_packet_%d.bin\0", packet_counter++);
+        win32_write_buffer_to_file(dump_name, buffer, recv_length);
 
         u32 send_length = win32_net_send_to(args->client_communication_socket, args->game_client_address, buffer, recv_length);
         if (!send_length)
@@ -141,15 +150,20 @@ main(void)
                                             .client_communication_socket = client_communication_socket,
                                             .game_client_address         = game_client_address};
 
-    printf("Thread 1:\n");
-    HANDLE client_thread = (HANDLE)_beginthread(proxy_client_connection, 0, &client_args);
-    printf("Thread 2:\n");
-    HANDLE server_thread = (HANDLE)_beginthread(proxy_server_connection, 0, &server_args);
-    WaitForSingleObject(client_thread, INFINITE);
-    WaitForSingleObject(server_thread, INFINITE);
+    HANDLE threads[2] = {0};
+    printf("Starting client communication thread (0)\n");
+    threads[0] = (HANDLE)_beginthread(proxy_client_connection, 0, &client_args);
+    printf("Starting server communication thread (1)\n");
+    threads[1] = (HANDLE)_beginthread(proxy_server_connection, 0, &server_args);
+    WaitForMultipleObjects(2, threads, TRUE, INFINITE);
 
-
-    goto abort_recv_address;
+    CloseHandle(threads[0]);
+    CloseHandle(threads[1]);
+    win32_net_address_destroy(game_client_address);
+    win32_net_socket_destroy(server_communication_socket);
+    win32_net_address_destroy(server_address);
+    win32_net_socket_destroy(client_communication_socket);
+    win32_net_wsa_cleanup();
     debug_allocation_check_for_unfreed_memory();
     return 0;
 abort_recv_address:
